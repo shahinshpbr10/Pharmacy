@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AuthMode { signIn, signUp }
 
@@ -22,16 +24,60 @@ class _AuthPageState extends State<AuthPage> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
 
-    if (_authMode == AuthMode.signIn) {
-      print("🔐 Signing in with $email / $password");
-    } else {
-      print("🆕 Signing up $name with $email / $password");
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final auth = FirebaseAuth.instance;
+
+      if (_authMode == AuthMode.signIn) {
+        // Check approval in pharmacy collection
+        final query = await firestore
+            .collection('pharmacy')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get();
+
+        if (query.docs.isEmpty || query.docs.first['approvalStatus'] != 'approved') {
+          _showError('Access Denied. Approval Pending or Not Found.');
+          return;
+        }
+
+        await auth.signInWithEmailAndPassword(email: email, password: password);
+        _showMessage('Signed in successfully!');
+      } else {
+        final userCredential = await auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        await firestore.collection('pharmacy').doc(userCredential.user!.uid).set({
+          'name': name,
+          'email': email,
+          'approvalStatus': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        _showMessage('Account created. Awaiting admin approval.');
+      }
+    } catch (e) {
+      _showError('Error: ${e.toString()}');
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
   }
 
   @override

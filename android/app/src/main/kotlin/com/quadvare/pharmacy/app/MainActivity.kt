@@ -1,4 +1,4 @@
-package com.example.zappq_pharmacy
+package com.quadvare.pharmacy.app
 
 import io.flutter.embedding.android.FlutterActivity
 

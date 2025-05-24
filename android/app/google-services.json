@@ -1,0 +1,447 @@
+{
+  "project_info": {
+    "project_number": "853054702494",
+    "firebase_url": "https://docbooking-9ec13-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "docbooking-9ec13",
+    "storage_bucket": "docbooking-9ec13.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:e524a124347e639ea30c8f",
+        "android_client_info": {
+          "package_name": "com.clinic_admin.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:ca2f0e29cad15a5ca30c8f",
+        "android_client_info": {
+          "package_name": "com.example.zappq_admin_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:c01c89558d2a81dea30c8f",
+        "android_client_info": {
+          "package_name": "com.example.zappq_nurse_apk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:b36a837c352677a4a30c8f",
+        "android_client_info": {
+          "package_name": "com.mediza.dashboard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:f62bb1ccd3917160a30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.clinic.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-csod3lklj6hcjr1j310a6c35jtekrt1i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quadvare.clinic.app",
+            "certificate_hash": "a8ef38aa110e573415592014ff4ce26c43385b00"
+          }
+        },
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:97830f6222e3a3c9a30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.mediza.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-4qsak5j25519gt1259jo4ojafukrqou4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quadvare.mediza.app",
+            "certificate_hash": "ef72f8f419c9f237fd7ac6caf7bb08a458464cc8"
+          }
+        },
+        {
+          "client_id": "853054702494-fhujukd6d2nu3fdcing1l9o28rdjgulm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quadvare.mediza.app",
+            "certificate_hash": "deef5e68b2e3cb351518c896d848c8b088d1b86c"
+          }
+        },
+        {
+          "client_id": "853054702494-la0hpjpcphctm3liktbti6bq84belrnf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quadvare.mediza.app",
+            "certificate_hash": "96ea9796e350078e4641589b061f517421a38647"
+          }
+        },
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:85aa8d5b6e816349a30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.mediza_dash"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:39e356ba5c88a57ca30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.pharmacy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:bbfe0a3c74019a5da30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.zappqAdmin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:764a4b13f0708374a30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.zappq_admin.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-67ao1jdfupkbqv59lh0h1s2rf665734m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quadvare.zappq_admin.app",
+            "certificate_hash": "7fa9113cf6cf9820a9094025893cd3bf262a2904"
+          }
+        },
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853054702494:android:4aad9121cd4e46b3a30c8f",
+        "android_client_info": {
+          "package_name": "com.quadvare.zappqnurse.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853054702494-nfiesb64gs1iu44rrpmv678ba6cq7kau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA2yNxEEZ2QKHWnEuUsxOiDH9Yv74ZHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853054702494-lp3jogdvru9m45l0a43kju520h7csqg8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "853054702494-0rm90i2qu5j8rhar7tlmsakvmn4l4cj1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.qvPatient"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
