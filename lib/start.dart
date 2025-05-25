@@ -14,19 +14,19 @@ class App extends StatelessWidget {
     return MaterialApp(
       title: 'ZappQ Pharmacy & Smart Clinic',
       debugShowCheckedModeBanner: false,
-      // home: StreamBuilder<User?>(
-      //   stream: FirebaseAuth.instance.authStateChanges(),
-      //   builder: (context, snapshot) {
-      //     if (snapshot.connectionState == ConnectionState.waiting) {
-      //       return const Center(child: CircularProgressIndicator());
-      //     } else if (snapshot.hasData) {
-      //       return const Landing();
-      //     } else {
-      //       return const AuthPage();
-      //     }
-      //   },
-      // ),
-      home: Landing(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasData) {
+            return const Landing();
+          } else {
+            return const AuthPage();
+          }
+        },
+      ),
+      // home: Landing(),
     );
   }
 }

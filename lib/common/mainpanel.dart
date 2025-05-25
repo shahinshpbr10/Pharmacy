@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:zappq_pharmacy/Pages/call_section.dart';
+import 'package:zappq_pharmacy/Pages/chatsection.dart';
+import 'package:zappq_pharmacy/Pages/dashboard_section.dart';
 import '../enum/enums.dart';
 
 
@@ -19,14 +22,14 @@ class _MainPanelState extends State<MainPanel> {
   Widget build(BuildContext context) {
     switch (widget.selectedSection) {
       case Section.Dashboard:
-        return Scaffold(body: Text("Dashboard"));
+        return DashBoardSection();
       case Section.Reminder:
         return Scaffold(body: Text("Reminder"));
       case Section.chat:
-        return const Placeholder();
+        return const ChatScreen();
 
       case Section.call:
-        return const Scaffold(body: Text("Call"),);
+        return const CallSection();
       case Section.saved:
         return const Scaffold(body: Text("Saved"));
       default:
