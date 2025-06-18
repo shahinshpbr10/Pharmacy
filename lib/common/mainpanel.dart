@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:zappq_pharmacy/Pages/call_section.dart';
-import 'package:zappq_pharmacy/Pages/chatsection.dart';
 import 'package:zappq_pharmacy/Pages/dashboard_section.dart';
+import 'package:zappq_pharmacy/Pages/smartclinic.dart';
+import '../Pages/chat_screen.dart';
 import '../enum/enums.dart';
 
 
@@ -31,7 +32,7 @@ class _MainPanelState extends State<MainPanel> {
       case Section.call:
         return const CallSection();
       case Section.saved:
-        return const Scaffold(body: Text("Saved"));
+        return SmartClinicControlScreen();
       default:
         return const Center(child: Text('Invalid section'));
     }

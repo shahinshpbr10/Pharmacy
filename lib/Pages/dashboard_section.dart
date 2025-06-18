@@ -1,8 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-
-import '../models/Events.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashBoardSection extends StatefulWidget {
   const DashBoardSection({super.key});
@@ -19,8 +18,27 @@ class _DashBoardSectionState extends State<DashBoardSection> {
   @override
   void initState() {
     super.initState();
-    _meetings = _getDataSource();
+    _meetings = [];
     _dataSource = MeetingDataSource(_meetings);
+
+    FirebaseFirestore.instance.collection('calendar_events').snapshots().listen((snapshot) {
+      final List<Meeting> loadedMeetings = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Meeting(
+          data['title'] ?? 'Untitled',
+          DateTime.parse(data['from']),
+          DateTime.parse(data['to']),
+          _hexToColor(data['color'] ?? "#2196F3"),
+          data['isAllDay'] ?? false,
+          doc.id,
+        );
+      }).toList();
+
+      setState(() {
+        _meetings = loadedMeetings;
+        _dataSource = MeetingDataSource(_meetings);
+      });
+    });
   }
 
   void showAddOrEditDialog(Meeting? meeting) {
@@ -36,34 +54,28 @@ class _DashBoardSectionState extends State<DashBoardSection> {
             decoration: const InputDecoration(labelText: 'Event Title'),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  if (meeting != null) {
-                    final index = _meetings.indexWhere((m) =>
-                    m.eventName == meeting.eventName &&
-                        m.from == meeting.from &&
-                        m.to == meeting.to);
-                    if (index != -1) {
-                      _meetings[index] = Meeting(
-                        controller.text,
-                        meeting.from,
-                        meeting.to,
-                        meeting.background,
-                        meeting.isAllDay,
-                      );
-                    }
-                  } else {
-                    final start = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 10);
-                    final end = start.add(const Duration(hours: 1));
-                    _meetings.add(Meeting(controller.text, start, end, Colors.purple, false));
-                  }
-                  _dataSource = MeetingDataSource(_meetings);
-                });
+              onPressed: () async {
+                final start = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 10);
+                final end = start.add(const Duration(hours: 1));
+                final event = {
+                  'title': controller.text,
+                  'from': start.toIso8601String(),
+                  'to': end.toIso8601String(),
+                  'color': '#9C27B0',
+                  'isAllDay': false,
+                };
+
+                if (meeting == null) {
+                  await FirebaseFirestore.instance.collection('calendar_events').add(event);
+                } else {
+                  await FirebaseFirestore.instance
+                      .collection('calendar_events')
+                      .doc(meeting.docId)
+                      .update(event);
+                }
+
                 Navigator.pop(context);
               },
               child: const Text('Save'),
@@ -83,11 +95,8 @@ class _DashBoardSectionState extends State<DashBoardSection> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _meetings.remove(meeting);
-                _dataSource = MeetingDataSource(_meetings);
-              });
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('calendar_events').doc(meeting.docId).delete();
               Navigator.pop(context);
             },
             child: const Text('Delete'),
@@ -101,7 +110,6 @@ class _DashBoardSectionState extends State<DashBoardSection> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Left Panel
         Container(
           width: 300,
           color: Colors.white,
@@ -122,8 +130,6 @@ class _DashBoardSectionState extends State<DashBoardSection> {
             ],
           ),
         ),
-
-        // Right Panel: Calendar
         Expanded(
           child: Container(
             color: const Color(0xFFF8F8F8),
@@ -145,46 +151,18 @@ class _DashBoardSectionState extends State<DashBoardSection> {
                       appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
                       showAgenda: true,
                     ),
-                    onTap: (CalendarTapDetails details) {
+                    onTap: (details) {
                       if (details.targetElement == CalendarElement.calendarCell) {
                         setState(() => _selectedDate = details.date ?? DateTime.now());
                         showAddOrEditDialog(null);
                       } else if (details.targetElement == CalendarElement.appointment &&
                           details.appointments?.first is Meeting) {
-                        final appt = details.appointments!.first as Meeting;
-                        showAddOrEditDialog(appt);
+                        showAddOrEditDialog(details.appointments!.first as Meeting);
                       }
                     },
-                    onLongPress: (CalendarLongPressDetails details) {
+                    onLongPress: (details) {
                       if (details.appointments?.first is Meeting) {
                         _confirmDelete(details.appointments!.first as Meeting);
-                      }
-                    },
-                    onDragEnd: (AppointmentDragEndDetails details) {
-                      final Object? dragged = details.appointment;
-
-                      if (dragged is Meeting && details.droppingTime != null) {
-                        setState(() {
-                          final index = _meetings.indexWhere((m) =>
-                          m.eventName == dragged.eventName &&
-                              m.from == dragged.from &&
-                              m.to == dragged.to);
-                          if (index != -1) {
-                            final duration = dragged.to.difference(dragged.from);
-                            final newStart = details.droppingTime!;
-                            final newEnd = newStart.add(duration);
-
-                            _meetings[index] = Meeting(
-                              dragged.eventName,
-                              newStart,
-                              newEnd,
-                              dragged.background,
-                              dragged.isAllDay,
-                            );
-
-                            _dataSource = MeetingDataSource(_meetings);
-                          }
-                        });
                       }
                     },
                   ),
@@ -211,11 +189,7 @@ class _DashBoardSectionState extends State<DashBoardSection> {
         color: bgColor ?? const Color(0xFFEAF8EC),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          )
+          BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 2))
         ],
       ),
       child: Row(
@@ -235,43 +209,37 @@ class _DashBoardSectionState extends State<DashBoardSection> {
                   Container(
                     margin: const EdgeInsets.only(left: 6),
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text(
-                      "5",
-                      style: TextStyle(color: Colors.white, fontSize: 10),
-                    ),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: const Text("5", style: TextStyle(color: Colors.white, fontSize: 10)),
                   )
               ],
             ),
           ),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor ?? Colors.black,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor ?? Colors.black),
           ),
         ],
       ),
     );
   }
 
-  List<Meeting> _getDataSource() {
-    final List<Meeting> meetings = <Meeting>[];
-    final DateTime today = DateTime.now();
-    final DateTime startTime = DateTime(today.year, today.month, today.day, 9);
-    final DateTime endTime = startTime.add(const Duration(hours: 2));
-    meetings.add(Meeting('Conference', startTime, endTime, const Color(0xFF0F8644), false));
-    meetings.add(Meeting('Team Review', today.add(const Duration(days: 2, hours: 11)),
-        today.add(const Duration(days: 2, hours: 12)), Colors.deepOrange, false));
-    meetings.add(Meeting('Doctor Visit', today.add(const Duration(days: 3, hours: 10)),
-        today.add(const Duration(days: 3, hours: 11)), Colors.blue, false));
-    return meetings;
+  Color _hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) hex = "FF$hex";
+    return Color(int.parse(hex, radix: 16));
   }
+}
+
+class Meeting {
+  Meeting(this.eventName, this.from, this.to, this.background, this.isAllDay, [this.docId = ""]);
+
+  final String eventName;
+  final DateTime from;
+  final DateTime to;
+  final Color background;
+  final bool isAllDay;
+  final String docId;
 }
 
 class MeetingDataSource extends CalendarDataSource {
@@ -281,23 +249,14 @@ class MeetingDataSource extends CalendarDataSource {
 
   @override
   DateTime getStartTime(int index) => _getMeetingData(index).from;
-
   @override
   DateTime getEndTime(int index) => _getMeetingData(index).to;
-
   @override
   String getSubject(int index) => _getMeetingData(index).eventName;
-
   @override
   Color getColor(int index) => _getMeetingData(index).background;
-
   @override
   bool isAllDay(int index) => _getMeetingData(index).isAllDay;
 
-  Meeting _getMeetingData(int index) {
-    final dynamic meeting = appointments![index];
-    return meeting is Meeting ? meeting : Meeting('', DateTime.now(), DateTime.now(), Colors.grey, false);
-  }
+  Meeting _getMeetingData(int index) => appointments![index] as Meeting;
 }
-
-

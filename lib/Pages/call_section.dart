@@ -45,7 +45,7 @@ class CallSection extends StatelessWidget {
                   itemCount: 10,
                   itemBuilder: (context, index) {
                     return ListTile(
-                      leading: const CircleAvatar(backgroundImage: AssetImage('assets/user.png')),
+                      leading: const CircleAvatar(backgroundImage: AssetImage('assets/zappq_icon.jpg')),
                       title: const Text("Shahinsh"),
                       subtitle: const Text("needed med urgent"),
                       trailing: Text("2:50", style: TextStyle(fontSize: 12)),

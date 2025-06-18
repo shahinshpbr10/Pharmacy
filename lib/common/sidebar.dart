@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import '../enum/enums.dart';
 import '../Widgets/buildiconbutton.dart'; // Contains SidebarIconButton
 
@@ -49,19 +50,19 @@ ClipRRect(
             onTap: onSectionTap,
           ),
           SidebarIconButton(
-            icon: Icons.bookmark,
-            label: 'Saved',
+            icon: Iconsax.hospital,
+            label: 'S Clinic',
             section: Section.saved,
             selectedSection: selectedSection,
             onTap: onSectionTap,
           ),
-          SidebarIconButton(
-            icon: Icons.lock_clock,
-            label: 'Reminder',
-            section: Section.Reminder,
-            selectedSection: selectedSection,
-            onTap: onSectionTap,
-          ),
+          // SidebarIconButton(
+          //   icon: Icons.lock_clock,
+          //   label: 'Reminder',
+          //   section: Section.Reminder,
+          //   selectedSection: selectedSection,
+          //   onTap: onSectionTap,
+          // ),
         ],
       ),
     );
