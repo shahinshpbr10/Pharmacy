@@ -66,7 +66,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       );
 
       if (result != null && result.files.isNotEmpty) {
-        final uid = widget.bookingDoc['Uid'];
+        final uid = widget.bookingDoc['uid'];
         final patientName = widget.bookingDoc['patientName'] ?? 'unknown';
         final testName = widget.bookingDoc['serviceName'] ?? 'test';
         final docRef = FirebaseFirestore.instance
@@ -109,13 +109,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           final metadata = SettableMetadata(
             contentType: _getContentType(fileExtension),
             contentDisposition: 'inline',
-            customMetadata: {
-              'firebaseStorageDownloadTokens': randomToken,
-            },
           );
+
 
           final uploadTask = await storageRef.putData(fileBytes, metadata);
           final downloadUrl = await uploadTask.ref.getDownloadURL();
+
 
           if (isBill) {
             await FirebaseFirestore.instance.collection('smartclinicbills').add({
@@ -137,6 +136,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         }
 
         if (!isBill) {
+          print('-------');
+          print(uid);
+          print('-------');
+
           final totalSize = fileSizes.fold<double>(0, (sum, size) => sum + size);
           await docRef.set({
             'fileNames': fileNames,
@@ -150,7 +153,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           }, SetOptions(merge: true));
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      print("UPLOAD ERROR: $e");
+      print("STACKTRACE: $stack");
       _showSnackBar('Upload failed: ${e.toString()}', Colors.red);
     }
 
