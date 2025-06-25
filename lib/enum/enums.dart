@@ -1,2 +1,2 @@
-enum Section { Dashboard ,chat, call, saved, Reminder }
+enum Section { Dashboard ,chat, saved, Slots }
 enum AuthMode { signIn, signUp }

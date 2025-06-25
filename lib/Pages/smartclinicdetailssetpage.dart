@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_searchable_dropdown/flutter_searchable_dropdown.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -272,6 +274,25 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     setState(() => isUploading = false);
   }
 
+
+  // Future<String> _getAddressFromCoordinates(double latitude, double longitude) async {
+  //   try {
+  //     // Fetching the address directly using the geocoding package
+  //     List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+  //
+  //     // Just returning the first available address as plain text (without filtering)
+  //     if (placemarks.isNotEmpty) {
+  //       Placemark place = placemarks.first;
+  //       return place.toString();  // Return the Placemark object in its default string format
+  //     } else {
+  //       return "Address not available";
+  //     }
+  //   } catch (e) {
+  //     print("Error getting address: $e");
+  //     return "Error decoding address";
+  //   }
+  // }
+
   @override
   Widget build(BuildContext context) {
     final data = widget.bookingDoc.data() as Map<String, dynamic>;
@@ -319,18 +340,16 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     SizedBox(height: 12),
                     _buildInfoRow(Icons.phone, "Test name ", data['serviceName'] ?? 'N/A'),
                     SizedBox(height: 12),
-                    _buildInfoRow(Icons.medical_services, "Type", data['bookingType'] ?? 'N/A'),
-                    if (data['location'] != null) ...[
-                      SizedBox(height: 12),
-                      _buildInfoRow(
-                        Icons.location_on,
-                        "Location",
-                        data['address'] != null
-                            ? "Lat: ${data['location'].latitude}, Lng: ${data['location'].longitude}"
-                            : 'Not Available',
-                      ),
 
-                    ],
+                    _buildInfoRow(Icons.phone, "Time Slot ", data['selectedTimeSlot'] ?? 'N/A'),
+                    SizedBox(height: 12),
+                    _buildInfoRow(Icons.medical_services, "Type", data['bookingType'] ?? 'N/A'),
+                    SizedBox(height: 12),
+                    _buildInfoRow(Icons.medical_services, "Address", data['address'] ?? 'N/A'),
+
+
+
+
                   ],
                 ),
               ),
@@ -381,7 +400,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () => _openMap(data['address'] ?? ''),
+                            onPressed: () => _openMap(data['location'] ?? ''),
                             icon: Icon(Icons.map),
                             label: Flexible(
                               child: Text(
@@ -507,10 +526,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       stream: FirebaseFirestore.instance
                           .collection('smartclinic_booking')
                           .doc(widget.bookingDoc.id)
-                          .snapshots(), // Listen for document changes
+                          .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
-                          return CircularProgressIndicator(); // Show loading indicator while waiting
+                          return CircularProgressIndicator();
                         }
 
                         if (!snapshot.hasData || !snapshot.data!.exists) {

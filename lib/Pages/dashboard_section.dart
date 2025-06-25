@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,12 +14,29 @@ class _DashBoardSectionState extends State<DashBoardSection> {
   late MeetingDataSource _dataSource;
   DateTime _selectedDate = DateTime.now();
 
+  // Lab bookings state variables
+  int newBookingsCount = 0;
+  int totalBookingsCount = 0;
+  bool isLoadingBookings = true;
+
+  // Pharmacy orders state variables
+  int newOrdersCount = 0;
+  int totalOrdersCount = 0;
+  bool isLoadingOrders = true;
+
   @override
   void initState() {
     super.initState();
     _meetings = [];
     _dataSource = MeetingDataSource(_meetings);
 
+    // Load booking counts
+    _loadBookingCounts();
+
+    // Load pharmacy orders counts
+    _loadOrderCounts();
+
+    // Listen to calendar events
     FirebaseFirestore.instance.collection('calendar_events').snapshots().listen((snapshot) {
       final List<Meeting> loadedMeetings = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -39,6 +55,116 @@ class _DashBoardSectionState extends State<DashBoardSection> {
         _dataSource = MeetingDataSource(_meetings);
       });
     });
+
+    // Listen to booking changes in real-time
+    _listenToBookingChanges();
+
+    // Listen to pharmacy order changes in real-time
+    _listenToOrderChanges();
+  }
+
+  void _loadBookingCounts() async {
+    try {
+      final counts = await getBookingCounts();
+      setState(() {
+        newBookingsCount = counts['newBookings'] ?? 0;
+        totalBookingsCount = counts['totalBookings'] ?? 0;
+        isLoadingBookings = false;
+      });
+    } catch (e) {
+      print('Error loading booking counts: $e');
+      setState(() {
+        isLoadingBookings = false;
+      });
+    }
+  }
+
+  void _loadOrderCounts() async {
+    try {
+      final counts = await getOrderCounts();
+      setState(() {
+        newOrdersCount = counts['newOrders'] ?? 0;
+        totalOrdersCount = counts['totalOrders'] ?? 0;
+        isLoadingOrders = false;
+      });
+    } catch (e) {
+      print('Error loading order counts: $e');
+      setState(() {
+        isLoadingOrders = false;
+      });
+    }
+  }
+
+  void _listenToBookingChanges() {
+    // Listen to real-time changes in booking collection
+    FirebaseFirestore.instance.collection('smartclinic_booking').snapshots().listen((snapshot) {
+      final newBookings = snapshot.docs.where((doc) => doc.data()['status'] == 'pending').length;
+      final totalBookings = snapshot.docs.length;
+
+      setState(() {
+        newBookingsCount = newBookings;
+        totalBookingsCount = totalBookings;
+      });
+    });
+  }
+
+  void _listenToOrderChanges() {
+    // Listen to real-time changes in pharmacy orders collection
+    FirebaseFirestore.instance.collection('pharmacyorders').snapshots().listen((snapshot) {
+      final newOrders = snapshot.docs.where((doc) => doc.data()['status'] == 'pending').length;
+      final totalOrders = snapshot.docs.length;
+
+      setState(() {
+        newOrdersCount = newOrders;
+        totalOrdersCount = totalOrders;
+      });
+    });
+  }
+
+  Future<Map<String, int>> getBookingCounts() async {
+    final bookingCollection = FirebaseFirestore.instance.collection('smartclinic_booking');
+
+    // Get count for new bookings (status == "pending")
+    final newBookingsQuery = bookingCollection.where('status', isEqualTo: 'pending');
+    final newBookingsSnapshot = await newBookingsQuery.get();
+    final newBookings = newBookingsSnapshot.docs.length;
+
+    // Get count for total bookings
+    final totalBookingsSnapshot = await bookingCollection.get();
+    final totalBookings = totalBookingsSnapshot.docs.length;
+
+    print('------');
+    print('New Bookings: $newBookings');
+    print('Total Bookings: $totalBookings');
+    print('------');
+
+    return {
+      'newBookings': newBookings,
+      'totalBookings': totalBookings,
+    };
+  }
+
+  Future<Map<String, int>> getOrderCounts() async {
+    final orderCollection = FirebaseFirestore.instance.collection('pharmacyorders');
+
+    // Get count for new orders (status == "pending")
+    final newOrdersQuery = orderCollection.where('status', isEqualTo: 'pending');
+    final newOrdersSnapshot = await newOrdersQuery.get();
+    final newOrders = newOrdersSnapshot.docs.length;
+
+    // Get count for total orders
+    final totalOrdersSnapshot = await orderCollection.get();
+    final totalOrders = totalOrdersSnapshot.docs.length;
+
+    print('------');
+    print('New Orders: $newOrders');
+    print('Total Orders: $totalOrders');
+    print('------');
+
+    return {
+      'newOrders': newOrders,
+      'totalOrders': totalOrders,
+    };
   }
 
   void showAddOrEditDialog(Meeting? meeting) {
@@ -118,15 +244,31 @@ class _DashBoardSectionState extends State<DashBoardSection> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("LAB OVERVIEW", style: TextStyle(fontWeight: FontWeight.bold)),
-              _buildInfoCard(title: "New Bookings", value: "5", showBadge: true),
-              _buildInfoCard(title: "Total Bookings", value: "35"),
+              _buildInfoCard(
+                  title: "New Bookings",
+                  value: isLoadingBookings ? "..." : "$newBookingsCount",
+                  showBadge: newBookingsCount > 0,
+                  badgeValue: "$newBookingsCount"
+              ),
+              _buildInfoCard(
+                  title: "Total Bookings",
+                  value: isLoadingBookings ? "..." : "$totalBookingsCount"
+              ),
               const SizedBox(height: 12),
               const Text("Pharma Overview", style: TextStyle(fontWeight: FontWeight.bold)),
-              _buildInfoCard(title: "New Orders", value: "5", showBadge: true),
-              _buildInfoCard(title: "Total Orders", value: "35"),
+              _buildInfoCard(
+                  title: "New Orders",
+                  value: isLoadingOrders ? "..." : "$newOrdersCount",
+                  showBadge: newOrdersCount > 0,
+                  badgeValue: "$newOrdersCount"
+              ),
+              _buildInfoCard(
+                  title: "Total Orders",
+                  value: isLoadingOrders ? "..." : "$totalOrdersCount"
+              ),
               const SizedBox(height: 12),
-              _buildInfoCard(title: "Total Revenue", value: "₹42,000"),
-              _buildInfoCard(title: "Total Enquiries", value: "12"),
+              // _buildInfoCard(title: "Total Revenue", value: "₹42,000"),
+              // _buildInfoCard(title: "Total Enquiries", value: "12"),
             ],
           ),
         ),
@@ -181,6 +323,7 @@ class _DashBoardSectionState extends State<DashBoardSection> {
     Color? bgColor,
     Color? textColor,
     bool showBadge = false,
+    String? badgeValue,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -205,12 +348,15 @@ class _DashBoardSectionState extends State<DashBoardSection> {
                     fontSize: 14,
                   ),
                 ),
-                if (showBadge)
+                if (showBadge && badgeValue != null)
                   Container(
                     margin: const EdgeInsets.only(left: 6),
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: const Text("5", style: TextStyle(color: Colors.white, fontSize: 10)),
+                    child: Text(
+                        badgeValue,
+                        style: const TextStyle(color: Colors.white, fontSize: 10)
+                    ),
                   )
               ],
             ),

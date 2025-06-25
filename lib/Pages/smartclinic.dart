@@ -19,6 +19,7 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Row(
         children: [
           // Sidebar chat list
