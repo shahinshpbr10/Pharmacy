@@ -19,6 +19,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final chatPane = selectedSession != null
         ? MessagePane(
       userId: selectedSession!.userId,
+      phone: selectedSession!.phone,
       conversationId: selectedSession!.conversationId,
       userName: selectedSession!.userName,
       userProfile: selectedSession!.userProfile,

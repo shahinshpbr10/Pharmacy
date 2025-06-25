@@ -12,13 +12,14 @@ class MessagePane extends StatefulWidget {
   final String conversationId;
   final String userName;
   final String? userProfile;
+  final String? phone;
 
   const MessagePane({
     super.key,
     required this.userId,
     required this.conversationId,
     required this.userName,
-    this.userProfile,
+    this.userProfile, this.phone,
   });
 
   @override
@@ -70,7 +71,7 @@ class _MessagePaneState extends State<MessagePane> {
   }
 
   Future<void> _showOrderDialog(BuildContext context) {
-    String _status = 'Pending';
+    String _status = 'pending';
     double _totalPrice = 0.0;
     List<Map<String, dynamic>> _medicines = [];
 
@@ -381,6 +382,7 @@ class _MessagePaneState extends State<MessagePane> {
                       await FirebaseFirestore.instance.collection('pharmacyorders').add({
                         'status': _status,
                         'patientName': widget.userName,
+                        'phone':widget.phone,
                         'medicines': _medicines,
                         'totalPrice': _totalPrice,
                         'createdAt': FieldValue.serverTimestamp(),
@@ -440,9 +442,9 @@ class _MessagePaneState extends State<MessagePane> {
     );
   }
 
-  String _selectedStatus = 'Pending'; // Default selected status
+  String _selectedStatus = 'pending'; // Default selected status
   List<String> _statusOptions = [
-    'Pending', 'Approved', 'Packed', 'In Transit', 'Delivered', 'Completed'
+    'pending', 'approved', 'packed', 'in-Transit', 'delivered', 'completed'
   ];
   Future<void> updateOrderStatus(String status) async {
     try {

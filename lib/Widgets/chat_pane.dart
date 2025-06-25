@@ -105,6 +105,7 @@ class _ChatListPaneState extends State<ChatListPane> {
 
                       final userData = userSnap.data!;
                       final name = userData['name'] ?? 'Unknown';
+                      final phone = userData['phone'] ?? "000";
                       final profileImage = userData['profileImage'];
 
                       return ListTile(
@@ -118,9 +119,12 @@ class _ChatListPaneState extends State<ChatListPane> {
                         trailing: Text(formatTimestamp(lastTime), style: const TextStyle(fontSize: 12)),
                         onTap: () {
                           widget.onSessionSelected(ChatSession(
+
                             userId: userId,
+
                             conversationId: doc.id,
                             userName: name,
+                            phone:phone ,
                             userProfile: profileImage,
                           ));
                         },

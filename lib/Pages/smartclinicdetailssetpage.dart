@@ -503,32 +503,62 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ],
                     ),
                     SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      value: ['Pending', 'Sample Collected', 'Processing', 'Completed']
-                          .contains(data['status']) ? data['status'] : 'Pending', // Check if status is valid
-                      items: ['Pending', 'Sample Collected', 'Processing', 'Completed']
-                          .map((status) => DropdownMenuItem(
-                        value: status,
-                        child: Text(status),
-                      ))
-                          .toList(),
-                      onChanged: (value) async {
-                        if (value != null) {
-                          await FirebaseFirestore.instance
-                              .collection('smartclinic_booking')
-                              .doc(widget.bookingDoc.id)
-                              .update({'status': value});
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Status updated to $value'), backgroundColor: Colors.teal),
-                          );
-                          setState(() {});
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('smartclinic_booking')
+                          .doc(widget.bookingDoc.id)
+                          .snapshots(), // Listen for document changes
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return CircularProgressIndicator(); // Show loading indicator while waiting
                         }
+
+                        if (!snapshot.hasData || !snapshot.data!.exists) {
+                          return Text('Document not found');
+                        }
+
+                        final data = snapshot.data!.data() as Map<String, dynamic>;
+
+                        return DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          value: ['pending', 'approved', 'in-progress', 'sample Collected', 'processing', 'completed']
+                              .contains(data['status']) ? data['status'] : 'Pending', // Check if status is valid
+                          items: ['pending', 'approved', 'in-progress', 'sample Collected', 'processing', 'completed']
+                              .map((status) => DropdownMenuItem(
+                            value: status,
+                            child: Text(status),
+                          ))
+                              .toList(),
+                          onChanged: (value) async {
+                            if (value != null) {
+                              // Prepare the update data
+                              Map<String, dynamic> updateData = {'status': value};
+
+                              // If the status is 'completed', add or update the 'completedAt' field
+                              if (value == 'completed') {
+                                updateData['completedAt'] = FieldValue.serverTimestamp(); // Generate timestamp for completion
+                              }
+
+                              // Update Firestore document with the new status (and completedAt if applicable)
+                              await FirebaseFirestore.instance
+                                  .collection('smartclinic_booking')
+                                  .doc(widget.bookingDoc.id)
+                                  .update(updateData);
+
+                              // Show confirmation message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Status updated to $value'), backgroundColor: Colors.teal),
+                              );
+                            }
+                          },
+                        )
+                        ;
                       },
                     )
+
 
                   ],
                 ),
