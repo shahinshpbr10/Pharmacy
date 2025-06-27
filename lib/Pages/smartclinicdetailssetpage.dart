@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_searchable_dropdown/flutter_searchable_dropdown.dart';
-import 'package:geocoding/geocoding.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -625,29 +625,111 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           }
 
                           final docs = snapshot.data!.docs;
+                          // Convert Firestore docs to List<Map<String, dynamic>> format like your doctors
+                          final labTests = docs.map((doc) {
+                            return {
+                              'id': doc.id,
+                              'TEST_NAME': doc['TEST_NAME'] ?? 'Unknown Test',
+                              'PATIENT_RATE': doc['PATIENT_RATE'] ?? 0,
+                            };
+                          }).toList();
 
-                          return SearchableDropdown.single(
-                            hint: Text("Select a test to add"),
-                            value: selectedTestId,
-                            items: docs.map((doc) {
-                              return DropdownMenuItem<String>(
-                                value: doc.id,  // Setting the test id as value
-                                child: Text(
-                                  doc['TEST_NAME'] ?? 'Unknown Test',  // Displaying test name
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                          return Expanded(
+                            child: DropdownSearch<String>(
+                              popupProps: PopupProps.menu(
+                                showSearchBox: true,
+                                searchFieldProps: TextFieldProps(
+                                  decoration: InputDecoration(
+                                    hintText: "Search lab tests...",
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
                                 ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() => selectedTestId = value); // Update selectedTestId when changed
-                            },
-                            isExpanded: true,
-                            iconEnabledColor: Colors.blue,  // Customize icon color if needed
+                              ),
+                              items: labTests.isNotEmpty
+                                  ? labTests.map((test) => test['id'] as String).toList()
+                                  : [],
+                              dropdownBuilder: (context, selectedId) {
+                                if (selectedId == null || labTests.isEmpty) {
+                                  return const Text(
+                                    'Select Lab Test',
+                                    style: TextStyle(fontSize: 16),
+                                  );
+                                }
+
+                                final test = labTests.firstWhere(
+                                        (t) => t['id'] == selectedId,
+                                    orElse: () => {'TEST_NAME': 'Unknown', 'PATIENT_RATE': 0}
+                                );
+
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${test['TEST_NAME']}',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[100],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '₹${test['PATIENT_RATE']}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                              itemAsString: (id) {
+                                if (id == null || labTests.isEmpty) return 'Select Lab Test';
+
+                                final test = labTests.firstWhere(
+                                        (t) => t['id'] == id,
+                                    orElse: () => {'TEST_NAME': 'Unknown', 'PATIENT_RATE': 0}
+                                );
+
+                                return '${test['TEST_NAME']} (₹${test['PATIENT_RATE']})';
+                              },
+                              selectedItem: selectedTestId,
+                              onChanged: (value) async {
+                                if (value == null) return;
+
+                                setState(() {
+                                  selectedTestId = value;
+                                  // Add any other state resets you need here
+                                });
+
+                                // Add any additional logic you need when test is selected
+                              },
+                              dropdownDecoratorProps: DropDownDecoratorProps(
+                                dropdownSearchDecoration: InputDecoration(
+                                  labelText: "Lab Test",
+                                  hintText: "Select Lab Test",
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
                           );
                         },
                       ),
-                    ),
+                    )
+                    ,
 
                     SizedBox(height: 12),
 
