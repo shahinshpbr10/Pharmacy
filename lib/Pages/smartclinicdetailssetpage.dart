@@ -60,8 +60,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg',
           'pdf', 'doc', 'docx', 'txt', 'rtf',
           'xls', 'xlsx', 'csv',
-          'ppt', 'pptx',
-          'zip', 'rar', '7z',
+          'ppt', 'pptx', 'zip', 'rar', '7z',
           'mp4', 'avi', 'mov', 'wmv', 'mp3', 'wav',
           'html', 'css', 'js', 'json', 'xml'
         ],
@@ -92,6 +91,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
           if (fileBytes == null) continue;
 
+          // Check if the file size is less than 1.5 MB (1.5 * 1024 * 1024 bytes)
+          final fileSizeInMB = file.size / (1024 * 1024);
+          if (fileSizeInMB > 1.5) {
+            _showSnackBar('File size exceeds 1.5 MB. Please choose a smaller file.', Colors.red);
+            continue;
+          }
+
           if (isBill && fileExtension != 'pdf') {
             _showSnackBar('Only PDF files are allowed for bills.', Colors.red);
             continue;
@@ -105,18 +111,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
           final storageRef = FirebaseStorage.instance.ref().child(filePath);
 
-          // Generate a simple random token string
-          final randomToken = base64Url.encode(List<int>.generate(16, (_) => Random().nextInt(256)));
-
           final metadata = SettableMetadata(
             contentType: _getContentType(fileExtension),
             contentDisposition: 'inline',
           );
 
-
           final uploadTask = await storageRef.putData(fileBytes, metadata);
           final downloadUrl = await uploadTask.ref.getDownloadURL();
-
 
           if (isBill) {
             await FirebaseFirestore.instance.collection('smartclinicbills').add({
@@ -138,10 +139,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         }
 
         if (!isBill) {
-          print('-------');
-          print(uid);
-          print('-------');
-
           final totalSize = fileSizes.fold<double>(0, (sum, size) => sum + size);
           await docRef.set({
             'fileNames': fileNames,
@@ -163,6 +160,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
     setState(() => isUploading = false);
   }
+
 
 
   String _getContentType(String extension) {
