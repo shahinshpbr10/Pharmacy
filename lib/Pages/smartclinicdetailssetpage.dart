@@ -287,6 +287,46 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   //     return "Error decoding address";
   //   }
   // }
+  String? currentBookingId;
+
+
+  void _initializeAddonTests() {
+    final data = widget.bookingDoc.data() as Map<String, dynamic>;
+
+    // Clear existing data first
+    addonTests.clear();
+    addonPrice = 0;
+
+    // Load existing addon tests if they exist
+    if (data['addon_tests'] != null) {
+      addonTests = List<Map<String, dynamic>>.from(data['addon_tests']);
+    }
+
+    // Load existing addon price if it exists
+    if (data['addon_price'] != null) {
+      addonPrice = (data['addon_price'] as num?)?.toInt() ?? 0;
+    }
+
+    setState(() {});
+  }
+  @override
+  void initState() {
+    super.initState();
+    currentBookingId = widget.bookingDoc.id;
+    _initializeAddonTests();
+  }
+
+  @override
+  void didUpdateWidget(BookingDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the booking document has changed, reinitialize the addon tests
+    if (oldWidget.bookingDoc.id != widget.bookingDoc.id) {
+      currentBookingId = widget.bookingDoc.id;
+      _initializeAddonTests();
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +381,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     _buildInfoRow(Icons.medical_services, "Type", data['bookingType'] ?? 'N/A'),
                     SizedBox(height: 12),
                     _buildInfoRow(Icons.medical_services, "Address", data['address'] ?? 'N/A'),
+                    SizedBox(height: 12),
+                    _buildInfoRow(Icons.medical_services, "Delivery Charge", data['deliveryCharge'].toString()),
 
 
 
