@@ -578,6 +578,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     _buildInfoRow(Icons.medical_services, "Address", data['address'] ?? 'N/A'),
                     SizedBox(height: 12),
                     _buildInfoRow(Icons.medical_services, "Delivery Charge", data['deliveryCharge'].toString()),
+                    SizedBox(height: 12),
+                    _buildInfoRow(Icons.money, "Service charge", data['servicePrice'].toString()),
+
 
 
 
