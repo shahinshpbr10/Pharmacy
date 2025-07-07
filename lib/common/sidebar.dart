@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import '../Pages/logout_helper.dart';
 import '../enum/enums.dart';
 import '../Widgets/buildiconbutton.dart'; // Contains SidebarIconButton
 
@@ -70,6 +72,34 @@ ClipRRect(
           //   selectedSection: selectedSection,
           //   onTap: onSectionTap,
           // ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: IconButton(
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                    title: const Text("Logout"),
+                    content: const Text("Are you sure you want to logout?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Cancel"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) {
+                            Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                          }
+                        },
+                        child: const Text("Logout"),
+                      ),
+                    ],
+                  ));
+            }, icon: Icon(Icons.logout)),
+          )
         ],
       ),
     );
