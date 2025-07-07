@@ -14,7 +14,16 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
       .orderBy('createdAt', descending: true)
       .snapshots();
 
-  DocumentSnapshot? selectedBookingDoc; // Hold the selected doc for right pane
+  DocumentSnapshot? selectedBookingDoc;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +31,7 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
       backgroundColor: Colors.white,
       body: Row(
         children: [
-          // Sidebar chat list
+          // Sidebar
           Container(
             width: 320,
             color: Colors.grey[100],
@@ -44,14 +53,20 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: TextField(
+                    controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: "Search...",
+                      hintText: "Search by patient name...",
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       contentPadding: EdgeInsets.all(0),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchText = value.toLowerCase().trim();
+                      });
+                    },
                   ),
                 ),
                 Expanded(
@@ -65,17 +80,29 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                         return Center(child: Text('No Bookings Found'));
                       }
 
-                      final bookings = snapshot.data!.docs;
+                      final allBookings = snapshot.data!.docs;
+
+                      // Apply search filter
+                      final filteredBookings = _searchText.isEmpty
+                          ? allBookings
+                          : allBookings.where((doc) {
+                        final name = (doc['patientName'] ?? '').toString().toLowerCase();
+                        return name.contains(_searchText);
+                      }).toList();
+
+                      if (filteredBookings.isEmpty) {
+                        return Center(child: Text('No matching bookings'));
+                      }
 
                       return ListView.builder(
-                        itemCount: bookings.length,
+                        itemCount: filteredBookings.length,
                         itemBuilder: (context, index) {
-                          final booking = bookings[index];
+                          final booking = filteredBookings[index];
                           final name = booking['patientName'] ?? 'Unknown';
                           final phone = booking['phoneNumber'] ?? '';
                           final timeSlot = booking['selectedTimeSlot'] ?? '';
-                          // final type = booking['selectedBookingType'] ?? '';
                           final date = booking['selectedDate']?.toDate();
+                          final status = booking['status']??"";
 
                           return ListTile(
                             leading: CircleAvatar(
@@ -83,10 +110,10 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                               child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                             ),
                             title: Text(name.isEmpty ? 'No Name' : name),
-                            // subtitle: Text('$type\n$timeSlot'),
+                            subtitle: Text(status),
                             trailing: Text(
                               date != null
-                                  ? "${date.day}/${date.month} ${date.hour}:${date.minute}"
+                                  ? "${date.hour}:${date.minute.toString().padLeft(2, '0')}"
                                   : '',
                               style: TextStyle(fontSize: 11),
                             ),
@@ -105,7 +132,7 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
             ),
           ),
 
-          // Main detail panel
+          // Details view
           Expanded(
             child: selectedBookingDoc == null
                 ? Center(child: Text("Select a booking to see details"))

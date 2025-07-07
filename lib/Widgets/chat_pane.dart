@@ -40,17 +40,37 @@ class _ChatListPaneState extends State<ChatListPane> {
     return "$hour:$minute $ampm";
   }
 
-  Future<Map<String, dynamic>?> fetchUserProfile(String userId) async {
-    final doc = await FirebaseFirestore.instance.collection('app_users').doc(userId).get();
-    return doc.exists ? doc.data() : null;
+  Future<List<Map<String, dynamic>>> fetchChatsWithUserData() async {
+    final convoSnap = await FirebaseFirestore.instance
+        .collection('pharmacyInbox')
+        .orderBy('lastMessageAt', descending: true)
+        .get();
+
+    List<Map<String, dynamic>> chatItems = [];
+
+    for (var doc in convoSnap.docs) {
+      final userId = doc['userId'];
+      final userSnap = await FirebaseFirestore.instance.collection('app_users').doc(userId).get();
+
+      if (userSnap.exists) {
+        final userData = userSnap.data()!;
+        chatItems.add({
+          'docId': doc.id,
+          'userId': userId,
+          'lastMessage': doc['lastMessage'] ?? '',
+          'lastMessageAt': doc['lastMessageAt'] as Timestamp?,
+          'name': userData['name'] ?? 'Unknown',
+          'phone': userData['phone'] ?? '',
+          'profileImage': userData['profileImage'] ?? '',
+        });
+      }
+    }
+
+    return chatItems;
   }
 
   @override
   Widget build(BuildContext context) {
-    final convoRef = FirebaseFirestore.instance
-        .collection('pharmacyInbox')
-        .orderBy('lastMessageAt', descending: true);
-
     return Column(
       children: [
         const Padding(
@@ -69,66 +89,58 @@ class _ChatListPaneState extends State<ChatListPane> {
             controller: _searchController,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: "Search...",
+              hintText: "Search by name...",
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),
         const SizedBox(height: 10),
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: convoRef.snapshots(),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: fetchChatsWithUserData(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final docs = snapshot.data!.docs.where((doc) {
-                final title = (doc['title'] ?? '').toString().toLowerCase();
-                return title.contains(_searchQuery);
+              final chatList = snapshot.data!;
+              final filteredChats = _searchQuery.isEmpty
+                  ? chatList
+                  : chatList.where((chat) {
+                final name = chat['name'].toString().toLowerCase();
+                final phone = chat['phone'].toString().toLowerCase();
+                return name.contains(_searchQuery) || phone.contains(_searchQuery);
               }).toList();
 
+              if (filteredChats.isEmpty) {
+                return const Center(child: Text("No matching chats"));
+              }
+
               return ListView.builder(
-                itemCount: docs.length,
+                itemCount: filteredChats.length,
                 itemBuilder: (context, index) {
-                  final doc = docs[index];
-                  final userId = doc['userId']?.toString() ?? '';
-                  final lastMessage = doc['lastMessage']?.toString() ?? '';
-                  final lastTime = doc['lastMessageAt'] as Timestamp?;
+                  final chat = filteredChats[index];
 
-                  return FutureBuilder<Map<String, dynamic>?>(
-                    future: fetchUserProfile(userId),
-                    builder: (context, userSnap) {
-                      if (!userSnap.hasData) {
-                        return const ListTile(title: Text("Loading user..."));
-                      }
-
-                      final userData = userSnap.data!;
-                      final name = userData['name'] ?? 'Unknown';
-                      final phone = userData['phone'] ?? "000";
-                      final profileImage = userData['profileImage'];
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: profileImage != null && profileImage.isNotEmpty
-                              ? NetworkImage(profileImage)
-                              : const AssetImage('assets/zappq_icon.jpg') as ImageProvider,
-                        ),
-                        title: Text(name),
-                        subtitle: Text(lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        trailing: Text(formatTimestamp(lastTime), style: const TextStyle(fontSize: 12)),
-                        onTap: () {
-                          widget.onSessionSelected(ChatSession(
-
-                            userId: userId,
-
-                            conversationId: doc.id,
-                            userName: name,
-                            phone:phone ,
-                            userProfile: profileImage,
-                          ));
-                        },
-                      );
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: chat['profileImage'] != null && chat['profileImage'].isNotEmpty
+                          ? NetworkImage(chat['profileImage'])
+                          : const AssetImage('assets/zappq_icon.jpg') as ImageProvider,
+                    ),
+                    title: Text(chat['name']),
+                    subtitle: Text(chat['lastMessage'], maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: Text(
+                      formatTimestamp(chat['lastMessageAt']),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onTap: () {
+                      widget.onSessionSelected(ChatSession(
+                        userId: chat['userId'],
+                        conversationId: chat['docId'],
+                        userName: chat['name'],
+                        phone: chat['phone'],
+                        userProfile: chat['profileImage'],
+                      ));
                     },
                   );
                 },
