@@ -55,11 +55,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
 
     setState(() => isUploading = true);
+
     final uid = widget.bookingDoc['uid'];
     final patientName = widget.bookingDoc['patientName'] ?? 'unknown';
     final testName = widget.bookingDoc['serviceName'] ?? 'test';
+    final bookingId = widget.bookingDoc.id;
 
     try {
+      final subcollection = isBill ? 'test_bills' : 'test_reports';
+      final docRef = FirebaseFirestore.instance
+          .collection('smartclinic_booking')
+          .doc(bookingId)
+          .collection(subcollection)
+          .doc(bookingId);
+
+      final existingDoc = await docRef.get();
+      List<dynamic> existingFiles = existingDoc.exists ? (existingDoc.data()?[bookingId] ?? []) : [];
+
       for (final file in selectedFiles) {
         final fileName = file.name;
         final fileBytes = file.bytes;
@@ -89,46 +101,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         final uploadTask = await ref.putData(fileBytes, metadata);
         final downloadUrl = await uploadTask.ref.getDownloadURL();
 
-        if (isBill) {
-          await FirebaseFirestore.instance.collection('smartclinicbills').add({
-            'userId': uid,
-            'patientName': patientName,
-            'testName': testName,
-            'fileUrl': downloadUrl,
-            'fileName': finalName,
-            'createdAt': Timestamp.now(),
-          });
-        } else {
-          final docRef = FirebaseFirestore.instance
-              .collection('app_users')
-              .doc(uid)
-              .collection('health_documents')
-              .doc('SmartClinic');
+        final fileData = {
+          'fileName': finalName,
+          'fileUrl': downloadUrl,
+          'createdAt': Timestamp.now(),
+        };
 
-          final doc = await docRef.get();
-          List<dynamic> names = doc['fileNames'] ?? [];
-          List<dynamic> urls = doc['fileUrls'] ?? [];
-          List<dynamic> dates = doc['uploadDates'] ?? [];
-          List<dynamic> sizes = doc['fileSizes'] ?? [];
-
-          names.add(finalName);
-          urls.add(downloadUrl);
-          dates.add(Timestamp.now());
-          sizes.add(file.size);
-
-          await docRef.set({
-            'fileNames': names,
-            'fileUrls': urls,
-            'uploadDates': dates,
-            'fileSizes': sizes,
-            'totalFiles': names.length,
-          }, SetOptions(merge: true));
-        }
-
+        existingFiles.add(fileData);
         _showSnackBar('Uploaded: $fileName', Colors.green);
       }
 
-      // Clear after upload
+      await docRef.set({bookingId: existingFiles});
+
       setState(() {
         if (isBill) {
           pickedBills.clear();
@@ -142,6 +126,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
     setState(() => isUploading = false);
   }
+
 
   Future<bool> _showConfirmDialog(String message) async {
     return await showDialog<bool>(
@@ -164,94 +149,55 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         false;
   }
 
-  Widget _buildUploadedReports() {
-    final uid = widget.bookingDoc['uid'];
+  Widget _buildUploadedFiles({required bool isBill}) {
+    final bookingId = widget.bookingDoc.id;
+    final subcollection = isBill ? 'test_bills' : 'test_reports';
 
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('app_users')
-          .doc(uid)
-          .collection('health_documents')
-          .doc('SmartClinic')
-          .get(),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('smartclinic_booking')
+          .doc(bookingId)
+          .collection(subcollection)
+          .doc(bookingId)
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return Text("No reports uploaded yet.");
+          return Text("No ${isBill ? 'bills' : 'reports'} uploaded yet.");
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
-        final names = List<String>.from(data['fileNames'] ?? []);
-        final urls = List<String>.from(data['fileUrls'] ?? []);
+        final files = List<Map<String, dynamic>>.from(data[bookingId] ?? []);
 
-        return _buildFilePreview(names, urls, (index) async {
-          final confirm = await _showConfirmDialog("Delete this report?");
-          if (!confirm) return;
-
-          final fileName = names[index];
-          final fileUrl = urls[index];
-
-          // Remove from Firebase Storage
-          try {
-            final ref = await FirebaseStorage.instance.refFromURL(fileUrl);
-            await ref.delete();
-          } catch (_) {}
-
-          // Remove from Firestore
-          names.removeAt(index);
-          urls.removeAt(index);
-
-          await FirebaseFirestore.instance
-              .collection('app_users')
-              .doc(uid)
-              .collection('health_documents')
-              .doc('SmartClinic')
-              .update({
-            'fileNames': names,
-            'fileUrls': urls,
-            'uploadDates': FieldValue.arrayRemove([data['uploadDates'][index]]),
-            'fileSizes': FieldValue.arrayRemove([data['fileSizes'][index]]),
-            'totalFiles': names.length,
-          });
-
-          setState(() {});
-        });
-      },
-    );
-  }
-
-  Widget _buildUploadedBills() {
-    final uid = widget.bookingDoc['uid'];
-
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('smartclinicbills')
-          .where('userId', isEqualTo: uid)
-          .get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Text("No bills uploaded yet.");
+        if (files.isEmpty) {
+          return Text("No ${isBill ? 'bills' : 'reports'} uploaded yet.");
         }
 
-        final docs = snapshot.data!.docs;
-
-        final names = docs.map((doc) => doc['fileName'] as String).toList();
-        final urls = docs.map((doc) => doc['fileUrl'] as String).toList();
+        final names = files.map((f) => f['fileName'] as String).toList();
+        final urls = files.map((f) => f['fileUrl'] as String).toList();
 
         return _buildFilePreview(names, urls, (index) async {
-          final confirm = await _showConfirmDialog("Delete this bill?");
+          final confirm = await _showConfirmDialog("Delete this file?");
           if (!confirm) return;
 
+          // Delete from Firebase Storage
           try {
-            final ref = await FirebaseStorage.instance.refFromURL(urls[index]);
+            final ref = FirebaseStorage.instance.refFromURL(urls[index]);
             await ref.delete();
           } catch (_) {}
 
-          await docs[index].reference.delete();
-          setState(() {});
+          files.removeAt(index);
+
+          await FirebaseFirestore.instance
+              .collection('smartclinic_booking')
+              .doc(bookingId)
+              .collection(subcollection)
+              .doc(bookingId)
+              .update({bookingId: files});
         });
       },
     );
   }
+
 
   Widget _buildFilePreview(List<String> names, List<String> urls, void Function(int index) onDelete) {
     return Wrap(
@@ -268,19 +214,31 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
-                  width: 80,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade200,
-                    image: isImage
-                        ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not open file')),
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: 80,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade200,
+                      image: isImage
+                          ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: !isImage
+                        ? Center(child: Icon(Icons.insert_drive_file, size: 36, color: Colors.deepPurple))
                         : null,
                   ),
-                  child: !isImage
-                      ? Center(child: Icon(Icons.insert_drive_file, size: 36, color: Colors.deepPurple))
-                      : null,
                 ),
                 // Delete button
                 Positioned(
@@ -558,30 +516,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   String? currentBookingId;
 
 
-  void _initializeAddonTests() {
-    final data = widget.bookingDoc.data() as Map<String, dynamic>;
-
-    // Clear existing data first
-    addonTests.clear();
-    addonPrice = 0;
-
-    // Load existing addon tests if they exist
-    if (data['addon_tests'] != null) {
-      addonTests = List<Map<String, dynamic>>.from(data['addon_tests']);
-    }
-
-    // Load existing addon price if it exists
-    if (data['addon_price'] != null) {
-      addonPrice = (data['addon_price'] as num?)?.toInt() ?? 0;
-    }
-
-    setState(() {});
-  }
   @override
   void initState() {
     super.initState();
     currentBookingId = widget.bookingDoc.id;
-    _initializeAddonTests();
   }
 
   @override
@@ -590,7 +528,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     // If the booking document has changed, reinitialize the addon tests
     if (oldWidget.bookingDoc.id != widget.bookingDoc.id) {
       currentBookingId = widget.bookingDoc.id;
-      _initializeAddonTests();
     }
   }
 
@@ -951,7 +888,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12),
-                              _buildUploadedReports(), // ⬅️ Show previously uploaded reports
+                              _buildUploadedFiles(isBill: false)
                             ],
                           ),
                         ),
@@ -980,7 +917,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12),
-                              _buildUploadedBills(), // ⬅️ Show previously uploaded bills
+                              _buildUploadedFiles(isBill: true)
                             ],
                           ),
                         ),
