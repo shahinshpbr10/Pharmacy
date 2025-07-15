@@ -255,20 +255,23 @@ class _DashBoardSectionState extends State<DashBoardSection> {
                   value: isLoadingBookings ? "..." : "$totalBookingsCount"
               ),
               const SizedBox(height: 12),
-              const Text("Pharma Overview", style: TextStyle(fontWeight: FontWeight.bold)),
-              _buildInfoCard(
-                  title: "New Orders",
-                  value: isLoadingOrders ? "..." : "$newOrdersCount",
-                  showBadge: newOrdersCount > 0,
-                  badgeValue: "$newOrdersCount"
-              ),
-              _buildInfoCard(
-                  title: "Total Orders",
-                  value: isLoadingOrders ? "..." : "$totalOrdersCount"
-              ),
-              const SizedBox(height: 12),
-              // _buildInfoCard(title: "Total Revenue", value: "₹42,000"),
-              // _buildInfoCard(title: "Total Enquiries", value: "12"),
+              ///Pharma Overview
+              // const Text("Pharma Overview", style: TextStyle(fontWeight: FontWeight.bold)),
+              // _buildInfoCard(
+              //     title: "New Orders",
+              //     value: isLoadingOrders ? "..." : "$newOrdersCount",
+              //     showBadge: newOrdersCount > 0,
+              //     badgeValue: "$newOrdersCount"
+              // ),
+              // _buildInfoCard(
+              //     title: "Total Orders",
+              //     value: isLoadingOrders ? "..." : "$totalOrdersCount"
+              // ),
+              // const SizedBox(height: 12),
+              const Text("Total Revenue", style: TextStyle(fontWeight: FontWeight.bold)),
+              _buildInfoCard(title: "Total Revenue", value: "₹0"),
+              _buildInfoCard(title: "Sahakar Revenue", value: "₹0"),
+              _buildInfoCard(title: "ZappQ Revenue", value: "₹0"),
             ],
           ),
         ),

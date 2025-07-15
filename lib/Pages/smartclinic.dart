@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:zappq_pharmacy/Pages/smartclinicdetailssetpage.dart';
 
 class SmartClinicControlScreen extends StatefulWidget {
@@ -18,11 +17,61 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
 
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
+  DateTime? _selectedFilterDate;
+  String? _selectedStatus;
+
+  final List<String> _statusOptions = ['Pending', 'In Progress', 'Completed'];
+
+  @override
+  void initState() {
+    super.initState();
+    _setIsOpenedFalseIfMissing();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _setIsOpenedFalseIfMissing() async {
+    final snapshot = await FirebaseFirestore.instance.collection('smartclinic_booking').get();
+    for (var doc in snapshot.docs) {
+      if (!doc.data().containsKey('isOpened')) {
+        await doc.reference.update({'isOpened': false});
+      }
+    }
+    if (!mounted) return;
+    print("Missing 'isOpened' fields set to false.");
+  }
+
+  void _showStatusDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String? tempStatus = _selectedStatus;
+        return AlertDialog(
+          title: Text('Select Status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _statusOptions.map((status) {
+              return RadioListTile<String>(
+                title: Text(status),
+                value: status,
+                groupValue: tempStatus,
+                onChanged: (value) {
+                  if (!mounted) return;
+                  setState(() {
+                    _selectedStatus = value;
+                  });
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -40,13 +89,45 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Smart Clinic',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                      Spacer(),
-                      Icon(Icons.filter_list),
+                      const Spacer(),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.filter_list),
+                        onSelected: (value) async {
+                          if (value == 'date') {
+                            DateTime now = DateTime.now();
+                            DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedFilterDate ?? now,
+                              firstDate: now.subtract(Duration(days: 365)),
+                              lastDate: now.add(Duration(days: 365)),
+                            );
+                            if (picked != null) {
+                              if (!mounted) return;
+                              setState(() {
+                                _selectedFilterDate = picked;
+                              });
+                            }
+                          } else if (value == 'status') {
+                            _showStatusDialog(context);
+                          } else if (value == 'clear') {
+                            if (!mounted) return;
+                            setState(() {
+                              _selectedFilterDate = null;
+                              _selectedStatus = null;
+                            });
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(value: 'date', child: Text('Filter by Date')),
+                          PopupMenuItem(value: 'status', child: Text('Filter by Status')),
+                          PopupMenuItem(value: 'clear', child: Text('Clear Filters')),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -63,6 +144,7 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                       contentPadding: EdgeInsets.all(0),
                     ),
                     onChanged: (value) {
+                      if (!mounted) return;
                       setState(() {
                         _searchText = value.toLowerCase().trim();
                       });
@@ -82,12 +164,21 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
 
                       final allBookings = snapshot.data!.docs;
 
-                      // Apply search filter
-                      final filteredBookings = _searchText.isEmpty
-                          ? allBookings
-                          : allBookings.where((doc) {
+                      final filteredBookings = allBookings.where((doc) {
                         final name = (doc['patientName'] ?? '').toString().toLowerCase();
-                        return name.contains(_searchText);
+                        final bookingDate = doc['selectedDate']?.toDate();
+                        final status = (doc['status'] ?? '').toString().toLowerCase();
+
+                        final matchesName = _searchText.isEmpty || name.contains(_searchText);
+                        final matchesDate = _selectedFilterDate == null ||
+                            (bookingDate != null &&
+                                bookingDate.year == _selectedFilterDate!.year &&
+                                bookingDate.month == _selectedFilterDate!.month &&
+                                bookingDate.day == _selectedFilterDate!.day);
+                        final matchesStatus = _selectedStatus == null ||
+                            status == _selectedStatus!.toLowerCase();
+
+                        return matchesName && matchesDate && matchesStatus;
                       }).toList();
 
                       if (filteredBookings.isEmpty) {
@@ -99,28 +190,50 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
                         itemBuilder: (context, index) {
                           final booking = filteredBookings[index];
                           final name = booking['patientName'] ?? 'Unknown';
-                          final phone = booking['phoneNumber'] ?? '';
-                          final timeSlot = booking['selectedTimeSlot'] ?? '';
                           final date = booking['selectedDate']?.toDate();
-                          final status = booking['status']??"";
+                          final status = booking['status'] ?? "";
+                          final isOpened = booking['isOpened'] == true;
 
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Colors.green,
-                              child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              ),
                             ),
                             title: Text(name.isEmpty ? 'No Name' : name),
                             subtitle: Text(status),
-                            trailing: Text(
-                              date != null
-                                  ? "${date.hour}:${date.minute.toString().padLeft(2, '0')}"
-                                  : '',
-                              style: TextStyle(fontSize: 11),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!isOpened) ...[
+                                  SizedBox(width: 6),
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ],
+                                SizedBox(width: 10,),
+                                Text(
+                                  date != null
+                                      ? "${date.hour}:${date.minute.toString().padLeft(2, '0')}"
+                                      : '',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              ],
                             ),
-                            onTap: () {
+                            onTap: () async {
+                              if (!mounted) return;
                               setState(() {
                                 selectedBookingDoc = booking;
                               });
+                              if (!isOpened) {
+                                await booking.reference.update({'isOpened': true});
+                              }
                             },
                           );
                         },
@@ -131,7 +244,6 @@ class _SmartClinicControlScreenState extends State<SmartClinicControlScreen> {
               ],
             ),
           ),
-
           // Details view
           Expanded(
             child: selectedBookingDoc == null
