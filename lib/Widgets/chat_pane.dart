@@ -14,6 +14,7 @@ class ChatListPane extends StatefulWidget {
 class _ChatListPaneState extends State<ChatListPane> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _messageTypeFilter = 'All'; // 'All', 'Image', 'Voice', 'Text'
 
   @override
   void initState() {
@@ -40,46 +41,40 @@ class _ChatListPaneState extends State<ChatListPane> {
     return "$hour:$minute $ampm";
   }
 
-  Future<List<Map<String, dynamic>>> fetchChatsWithUserData() async {
-    final convoSnap = await FirebaseFirestore.instance
-        .collection('pharmacyInbox')
-        .orderBy('lastMessageAt', descending: true)
-        .get();
+  Future<Map<String, dynamic>?> fetchUserData(String userId) async {
+    final userSnap = await FirebaseFirestore.instance.collection('app_users').doc(userId).get();
+    return userSnap.exists ? userSnap.data() : null;
+  }
 
-    List<Map<String, dynamic>> chatItems = [];
 
-    for (var doc in convoSnap.docs) {
-      final userId = doc['userId'];
-      final userSnap = await FirebaseFirestore.instance.collection('app_users').doc(userId).get();
-
-      if (userSnap.exists) {
-        final userData = userSnap.data()!;
-        chatItems.add({
-          'docId': doc.id,
-          'userId': userId,
-          'lastMessage': doc['lastMessage'] ?? '',
-          'lastMessageAt': doc['lastMessageAt'] as Timestamp?,
-          'name': userData['name'] ?? 'Unknown',
-          'phone': userData['phone'] ?? '',
-          'profileImage': userData['profileImage'] ?? '',
+  Widget _buildFilterMenu() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (value) {
+        setState(() {
+          _messageTypeFilter = value;
         });
-      }
-    }
-
-    return chatItems;
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'All', child: Text('All')),
+        const PopupMenuItem(value: 'Image', child: Text('Image')),
+        const PopupMenuItem(value: 'Voice', child: Text('Voice')),
+        const PopupMenuItem(value: 'Text', child: Text('Text')),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Row(
             children: [
-              Text("Chats", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Spacer(),
-              Icon(Icons.filter_list),
+              const Text("Chats", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              _buildFilterMenu(),
             ],
           ),
         ),
@@ -89,58 +84,81 @@ class _ChatListPaneState extends State<ChatListPane> {
             controller: _searchController,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: "Search by name...",
+              hintText: "Search by name or phone...",
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),
         const SizedBox(height: 10),
         Expanded(
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: fetchChatsWithUserData(),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('pharmacyInbox')
+                .orderBy('lastMessageAt', descending: true)
+                .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final chatList = snapshot.data!;
-              final filteredChats = _searchQuery.isEmpty
-                  ? chatList
-                  : chatList.where((chat) {
-                final name = chat['name'].toString().toLowerCase();
-                final phone = chat['phone'].toString().toLowerCase();
-                return name.contains(_searchQuery) || phone.contains(_searchQuery);
-              }).toList();
+              final docs = snapshot.data!.docs;
 
-              if (filteredChats.isEmpty) {
-                return const Center(child: Text("No matching chats"));
+              if (docs.isEmpty) {
+                return const Center(child: Text("No chats found"));
               }
 
               return ListView.builder(
-                itemCount: filteredChats.length,
+                itemCount: docs.length,
                 itemBuilder: (context, index) {
-                  final chat = filteredChats[index];
+                  final doc = docs[index];
+                  final userId = doc['userId'];
+                  final lastMessage = doc['lastMessage'] ?? '';
+                  final lastMessageAt = doc['lastMessageAt'] as Timestamp?;
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: chat['profileImage'] != null && chat['profileImage'].isNotEmpty
-                          ? NetworkImage(chat['profileImage'])
-                          : const AssetImage('assets/zappq_icon.jpg') as ImageProvider,
-                    ),
-                    title: Text(chat['name']),
-                    subtitle: Text(chat['lastMessage'], maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: Text(
-                      formatTimestamp(chat['lastMessageAt']),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    onTap: () {
-                      widget.onSessionSelected(ChatSession(
-                        userId: chat['userId'],
-                        conversationId: chat['docId'],
-                        userName: chat['name'],
-                        phone: chat['phone'],
-                        userProfile: chat['profileImage'],
-                      ));
+                  return FutureBuilder<Map<String, dynamic>?>(
+                    future: fetchUserData(userId),
+                    builder: (context, userSnapshot) {
+                      if (!userSnapshot.hasData) return const SizedBox.shrink();
+                      final userData = userSnapshot.data!;
+                      final name = userData['name'] ?? 'Unknown';
+                      final phone = userData['phone'] ?? '';
+                      final profileImage = userData['profileImage'] ?? '';
+
+                      final nameMatch = name.toLowerCase().contains(_searchQuery);
+                      final phoneMatch = phone.toLowerCase().contains(_searchQuery);
+                      final matchesSearch = _searchQuery.isEmpty || nameMatch || phoneMatch;
+
+                      final matchesFilter = _messageTypeFilter == 'All' ||
+                          (_messageTypeFilter == 'Image' && lastMessage.toLowerCase() == 'image') ||
+                          (_messageTypeFilter == 'Voice' && lastMessage.toLowerCase() == 'voice') ||
+                          (_messageTypeFilter == 'Text' &&
+                              lastMessage.toLowerCase() != 'image' &&
+                              lastMessage.toLowerCase() != 'voice');
+
+                      if (!matchesSearch || !matchesFilter) return const SizedBox.shrink();
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: profileImage.isNotEmpty
+                              ? NetworkImage(profileImage)
+                              : const AssetImage('assets/zappq_icon.jpg') as ImageProvider,
+                        ),
+                        title: Text(name),
+                        subtitle: Text(lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: Text(
+                          formatTimestamp(lastMessageAt),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onTap: () {
+                          widget.onSessionSelected(ChatSession(
+                            userId: userId,
+                            conversationId: doc.id,
+                            userName: name,
+                            phone: phone,
+                            userProfile: profileImage,
+                          ));
+                        },
+                      );
                     },
                   );
                 },

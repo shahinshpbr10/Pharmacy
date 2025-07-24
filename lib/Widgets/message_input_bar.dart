@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as path;
 
 class MessageInputBar extends StatefulWidget {
   final void Function(String message) onSend;
   final void Function(String imageUrl)? onImageSend;
-  final void Function(String fileUrl)? onFileSend;
 
-  const MessageInputBar({
-    super.key,
-    required this.onSend,
-    this.onImageSend,
-    this.onFileSend,
-  });
+  const MessageInputBar({super.key, required this.onSend, this.onImageSend});
 
   @override
   State<MessageInputBar> createState() => _MessageInputBarState();
@@ -32,31 +25,21 @@ class _MessageInputBarState extends State<MessageInputBar> {
     }
   }
 
-  Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> _pickImage({required ImageSource source}) async {
+    final picked = await _picker.pickImage(source: source);
     if (picked != null) {
-      final url = await _uploadFile(File(picked.path));
+      final url = await _uploadFile(picked);
       if (url != null && widget.onImageSend != null) {
         widget.onImageSend!(url);
       }
     }
   }
 
-  Future<void> _pickCamera() async {
-    final picked = await _picker.pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      final url = await _uploadFile(File(picked.path));
-      if (url != null && widget.onImageSend != null) {
-        widget.onImageSend!(url);
-      }
-    }
-  }
-
-  Future<String?> _uploadFile(File file) async {
+  Future<String?> _uploadFile(XFile file) async {
     try {
       final fileName = path.basename(file.path);
       final ref = FirebaseStorage.instance.ref().child('chat_files/$fileName');
-      final uploadTask = ref.putFile(file);
+      final uploadTask = ref.putData(await file.readAsBytes());
       final snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
@@ -77,11 +60,11 @@ class _MessageInputBarState extends State<MessageInputBar> {
         children: [
           IconButton(
             icon: const Icon(Icons.attach_file),
-            onPressed: _pickImage,
+            onPressed: () => _pickImage(source: ImageSource.gallery),
           ),
           IconButton(
             icon: const Icon(Icons.camera_alt),
-            onPressed: _pickCamera,
+            onPressed: () => _pickImage(source: ImageSource.camera),
           ),
           Expanded(
             child: TextField(
