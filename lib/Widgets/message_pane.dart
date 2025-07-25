@@ -481,7 +481,7 @@ class _MessagePaneState extends State<MessagePane> {
   }
 
 
-  String _selectedStatus = 'pending'; // Default selected status
+  String _selectedStatus = 'pending';
   List<String> _statusOptions = [
     'pending', 'approved', 'packed', 'in-Transit', 'delivered', 'completed'
   ];
