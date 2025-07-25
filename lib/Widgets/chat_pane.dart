@@ -74,7 +74,6 @@ class _ChatListPaneState extends State<ChatListPane> {
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'All', child: Text('All')),
         const PopupMenuItem(value: 'Unread', child: Text('Unread')),
-        const PopupMenuItem(value: 'Archived', child: Text('Archived')),
         const PopupMenuItem(value: 'Date', child: Text('Filter by Date')),
       ],
     );
@@ -153,9 +152,9 @@ class _ChatListPaneState extends State<ChatListPane> {
                   final userId = data['userId'];
                   final lastMessage = data['lastMessage'] ?? '';
                   final lastMessageAt = data['lastMessageAt'] as Timestamp?;
-
-                  final isUnread = !(data.containsKey('isRead') ? data['isRead'] : true);
-                  final isArchived = data.containsKey('isArchived') ? data['isArchived'] : false;
+                  final isRead = data['isRead'] == true;
+                  final isUnread = !isRead;
+                  final isArchived = data['isArchived'] == true;
 
                   final timestampDate = lastMessageAt?.toDate();
                   final isSameDate = _selectedDate == null ||
@@ -193,11 +192,28 @@ class _ChatListPaneState extends State<ChatListPane> {
                         ),
                         title: Text(name),
                         subtitle: Text(lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        trailing: Text(
-                          formatTimestamp(lastMessageAt),
-                          style: const TextStyle(fontSize: 12),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!isRead) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 10),
+                            Text(
+                              formatTimestamp(lastMessageAt),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
                         ),
-                        onTap: () {
+                        onTap: () async {
                           widget.onSessionSelected(ChatSession(
                             userId: userId,
                             conversationId: doc.id,
@@ -205,6 +221,14 @@ class _ChatListPaneState extends State<ChatListPane> {
                             phone: phone,
                             userProfile: profileImage,
                           ));
+
+                          // Update isRead to true if it's currently false
+                          if (!isRead) {
+                            await FirebaseFirestore.instance
+                                .collection('pharmacyInbox')
+                                .doc(doc.id)
+                                .update({'isRead': true});
+                          }
                         },
                       );
                     },
