@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:just_audio/just_audio.dart' as just_audio;
 
 import 'package:iconsax/iconsax.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'message_input_bar.dart';
 
@@ -36,8 +40,8 @@ class _MessagePaneState extends State<MessagePane> {
     return '$hour:$minute $ampm';
   }
 
-  Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+  Future<void> sendImageMessage(String imageUrl) async {
+    if (imageUrl.isEmpty) return;
 
     try {
       final messageRef = FirebaseFirestore.instance
@@ -50,9 +54,9 @@ class _MessagePaneState extends State<MessagePane> {
           .collection('messages');
 
       await messageRef.add({
-        'text': text.trim(),
-        'type': 'text',
-        'fileUrl': '',
+        'text': '', // leave blank
+        'type': 'image',
+        'fileUrl': imageUrl,
         'isUser': false,
         'isRead': true,
         'createdAt': FieldValue.serverTimestamp(),
@@ -63,10 +67,10 @@ class _MessagePaneState extends State<MessagePane> {
           .doc(widget.userId)
           .update({
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessage': text.trim(),
+        'lastMessage': '[Image]', // optional, can show preview
       });
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      debugPrint('Error sending image message: $e');
     }
   }
 
@@ -442,6 +446,41 @@ class _MessagePaneState extends State<MessagePane> {
     );
   }
 
+  Future<void> sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
+
+    try {
+      final messageRef = FirebaseFirestore.instance
+          .collection('app_users')
+          .doc(widget.userId)
+          .collection('pharmacyChats')
+          .doc('conversations')
+          .collection('items')
+          .doc(widget.conversationId)
+          .collection('messages');
+
+      await messageRef.add({
+        'text': text.trim(),
+        'type': 'text',
+        'fileUrl': '',
+        'isUser': false,
+        'isRead': true,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      await FirebaseFirestore.instance
+          .collection('pharmacyInbox')
+          .doc(widget.userId)
+          .update({
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessage': text.trim(),
+      });
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+    }
+  }
+
+
   String _selectedStatus = 'pending'; // Default selected status
   List<String> _statusOptions = [
     'pending', 'approved', 'packed', 'in-Transit', 'delivered', 'completed'
@@ -481,6 +520,33 @@ class _MessagePaneState extends State<MessagePane> {
     }
   }
 
+  Set<String> selectedMessageIds = {};
+  bool get isSelectionMode => selectedMessageIds.isNotEmpty;
+
+  Future<void> deleteSelectedMessages() async {
+    final batch = FirebaseFirestore.instance.batch();
+    final messagesRef = FirebaseFirestore.instance
+        .collection('app_users')
+        .doc(widget.userId)
+        .collection('pharmacyChats')
+        .doc('conversations')
+        .collection('items')
+        .doc(widget.conversationId)
+        .collection('messages');
+
+    for (String id in selectedMessageIds) {
+      final docRef = messagesRef.doc(id);
+      batch.delete(docRef);
+    }
+
+    await batch.commit();
+
+    setState(() {
+      selectedMessageIds.clear();
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final messagesRef = FirebaseFirestore.instance
@@ -510,13 +576,23 @@ class _MessagePaneState extends State<MessagePane> {
                     : const AssetImage('assets/zappq_icon.jpg') as ImageProvider,
               ),
               const SizedBox(width: 10),
+              Text(
+                widget.userName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const Spacer(),
+
+              // Dropdown (Order Status)
               DropdownButton<String>(
                 value: _selectedStatus,
                 onChanged: (newStatus) {
                   setState(() {
-                    _selectedStatus = newStatus ?? 'Pending';
+                    _selectedStatus = newStatus ?? 'pending';
                   });
-                  updateOrderStatus(_selectedStatus);  // Update status in Firestore
+                  updateOrderStatus(_selectedStatus);
                 },
                 items: _statusOptions.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
@@ -526,13 +602,132 @@ class _MessagePaneState extends State<MessagePane> {
                 }).toList(),
               ),
 
-              // Dropdown to select status
-              TextButton(child:  Text("Pack Med"), onPressed: () {
-                _showOrderDialog(context);
-              }),
               const SizedBox(width: 10),
-              IconButton(icon: const Icon(Icons.call), onPressed: () {}),
-              IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+
+              // Pack Med Button
+              TextButton(
+                child: const Text("Pack Med"),
+                onPressed: () => _showOrderDialog(context),
+              ),
+
+              const SizedBox(width: 10),
+
+              // Direct Call Button
+              IconButton(
+                icon: const Icon(Icons.call),
+                tooltip: "Call Patient",
+                onPressed: () async {
+                  final phone = widget.phone;
+                  if (phone != null && phone.isNotEmpty) {
+                    final Uri url = Uri.parse('tel:$phone');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not launch phone dialer')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Phone number not available')),
+                    );
+                  }
+                },
+              ),
+
+                        // More Icon
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) async {
+                  if (value == 'clear') {
+                    // Show confirmation dialog
+                    final shouldDelete = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Clear Chat'),
+                        content: const Text('Are you sure you want to delete all messages?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    // If user confirmed, delete messages
+                    if (shouldDelete == true) {
+                      final conversationId = widget.conversationId;
+                      final messagesRef = FirebaseFirestore.instance
+                          .collection('conversations')
+                          .doc(conversationId)
+                          .collection('messages');
+
+                      final batch = FirebaseFirestore.instance.batch();
+                      final snapshot = await messagesRef.get();
+
+                      for (final doc in snapshot.docs) {
+                        batch.delete(doc.reference);
+                      }
+
+                      await batch.commit();
+                      print('All messages deleted');
+                    }
+                  } else {
+                    // Coming soon actions
+                    print('$value is coming soon');
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'clear',
+                    child: Text('Clear Chat'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'soon1',
+                    child: Text('Coming Soon'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'soon2',
+                    child: Text('Coming Soon'),
+                  ),
+                ],
+              ),
+
+              if (isSelectionMode)
+                IconButton(
+                  icon: const Icon(Icons.delete,color: Colors.red),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Delete Messages"),
+                        content: const Text("Are you sure you want to delete the all messages?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Delete",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      await deleteSelectedMessages();
+                    }
+                  },
+                ),
             ],
           ),
         ),
@@ -555,9 +750,10 @@ class _MessagePaneState extends State<MessagePane> {
                   itemBuilder: (context, index) {
                     final msg = messages[index];
                     final data = msg.data() as Map<String, dynamic>;
+                    final messageId = msg.id;
                     final type = data['type'] ?? 'text';
                     final text = data['text'] ?? '';
-                    final fileUrl = data['fileUrl'] ?? '';
+                    final fileUrl = data['fileUrl'] ?? data['imageUrl'] ?? '';
                     final isUser = data['isUser'] ?? false;
                     final isMe = !isUser;
 
@@ -566,13 +762,7 @@ class _MessagePaneState extends State<MessagePane> {
                     if (type == 'image' && fileUrl.isNotEmpty) {
                       messageContent = ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          fileUrl,
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Text('Image failed to load'),
-                        ),
+                        child: Image.network(fileUrl, width: 200, height: 200, fit: BoxFit.cover),
                       );
                     } else if (type == 'voice' && fileUrl.isNotEmpty) {
                       messageContent = VoicePlayerWidget(filePath: fileUrl, isUser: isUser);
@@ -580,9 +770,35 @@ class _MessagePaneState extends State<MessagePane> {
                       messageContent = ChatBubble(text: text, isMe: isMe);
                     }
 
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: messageContent,
+                    bool isSelected = selectedMessageIds.contains(messageId);
+
+                    return GestureDetector(
+                      onLongPress: () {
+                        setState(() {
+                          if (isSelected) {
+                            selectedMessageIds.remove(messageId);
+                          } else {
+                            selectedMessageIds.add(messageId);
+                          }
+                        });
+                      },
+                      onTap: () {
+                        if (isSelectionMode) {
+                          setState(() {
+                            isSelected ? selectedMessageIds.remove(messageId) : selectedMessageIds.add(messageId);
+                          });
+                        }
+                      },
+                      child: Container(
+                        color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.transparent,
+                        child: Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: messageContent,
+                          ),
+                        ),
+                      ),
                     );
                   },
                 );
@@ -590,7 +806,10 @@ class _MessagePaneState extends State<MessagePane> {
             ),
           ),
         ),
-        MessageInputBar(onSend: sendMessage),
+        MessageInputBar(
+          onSend: (text) => sendMessage(text),
+          onImageSend: (imageUrl) => sendImageMessage(imageUrl),
+        ),
       ],
     );
   }

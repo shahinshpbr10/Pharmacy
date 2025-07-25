@@ -14,7 +14,8 @@ class ChatListPane extends StatefulWidget {
 class _ChatListPaneState extends State<ChatListPane> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _messageTypeFilter = 'All'; // 'All', 'Image', 'Voice', 'Text'
+  String _filterType = 'All'; // 'All', 'Unread', 'Archived', 'Date'
+  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -46,20 +47,35 @@ class _ChatListPaneState extends State<ChatListPane> {
     return userSnap.exists ? userSnap.data() : null;
   }
 
-
   Widget _buildFilterMenu() {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.filter_list),
-      onSelected: (value) {
-        setState(() {
-          _messageTypeFilter = value;
-        });
+      onSelected: (value) async {
+        if (value == 'Date') {
+          DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime.now(),
+            firstDate: DateTime(2023),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null) {
+            setState(() {
+              _selectedDate = picked;
+              _filterType = 'Date';
+            });
+          }
+        } else {
+          setState(() {
+            _filterType = value;
+            _selectedDate = null;
+          });
+        }
       },
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'All', child: Text('All')),
-        const PopupMenuItem(value: 'Image', child: Text('Image')),
-        const PopupMenuItem(value: 'Voice', child: Text('Voice')),
-        const PopupMenuItem(value: 'Text', child: Text('Text')),
+        const PopupMenuItem(value: 'Unread', child: Text('Unread')),
+        const PopupMenuItem(value: 'Archived', child: Text('Archived')),
+        const PopupMenuItem(value: 'Date', child: Text('Filter by Date')),
       ],
     );
   }
@@ -89,6 +105,27 @@ class _ChatListPaneState extends State<ChatListPane> {
             ),
           ),
         ),
+        if (_filterType != 'All')
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0, top: 8),
+            child: Row(
+              children: [
+                Text(
+                  "Filter: $_filterType${_filterType == 'Date' && _selectedDate != null ? ' (${_selectedDate!.toLocal().toString().split(' ')[0]})' : ''}",
+                  style: const TextStyle(color: Colors.black),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () {
+                    setState(() {
+                      _filterType = 'All';
+                      _selectedDate = null;
+                    });
+                  },
+                )
+              ],
+            ),
+          ),
         const SizedBox(height: 10),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
@@ -111,14 +148,32 @@ class _ChatListPaneState extends State<ChatListPane> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final doc = docs[index];
-                  final userId = doc['userId'];
-                  final lastMessage = doc['lastMessage'] ?? '';
-                  final lastMessageAt = doc['lastMessageAt'] as Timestamp?;
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  final userId = data['userId'];
+                  final lastMessage = data['lastMessage'] ?? '';
+                  final lastMessageAt = data['lastMessageAt'] as Timestamp?;
+
+                  final isUnread = !(data.containsKey('isRead') ? data['isRead'] : true);
+                  final isArchived = data.containsKey('isArchived') ? data['isArchived'] : false;
+
+                  final timestampDate = lastMessageAt?.toDate();
+                  final isSameDate = _selectedDate == null ||
+                      (timestampDate != null &&
+                          timestampDate.year == _selectedDate!.year &&
+                          timestampDate.month == _selectedDate!.month &&
+                          timestampDate.day == _selectedDate!.day);
+
+                  final matchesFilter = _filterType == 'All' ||
+                      (_filterType == 'Unread' && isUnread) ||
+                      (_filterType == 'Archived' && isArchived) ||
+                      (_filterType == 'Date' && isSameDate);
 
                   return FutureBuilder<Map<String, dynamic>?>(
                     future: fetchUserData(userId),
                     builder: (context, userSnapshot) {
-                      if (!userSnapshot.hasData) return const SizedBox.shrink();
+                      if (!userSnapshot.hasData || !matchesFilter) return const SizedBox.shrink();
+
                       final userData = userSnapshot.data!;
                       final name = userData['name'] ?? 'Unknown';
                       final phone = userData['phone'] ?? '';
@@ -128,14 +183,7 @@ class _ChatListPaneState extends State<ChatListPane> {
                       final phoneMatch = phone.toLowerCase().contains(_searchQuery);
                       final matchesSearch = _searchQuery.isEmpty || nameMatch || phoneMatch;
 
-                      final matchesFilter = _messageTypeFilter == 'All' ||
-                          (_messageTypeFilter == 'Image' && lastMessage.toLowerCase() == 'image') ||
-                          (_messageTypeFilter == 'Voice' && lastMessage.toLowerCase() == 'voice') ||
-                          (_messageTypeFilter == 'Text' &&
-                              lastMessage.toLowerCase() != 'image' &&
-                              lastMessage.toLowerCase() != 'voice');
-
-                      if (!matchesSearch || !matchesFilter) return const SizedBox.shrink();
+                      if (!matchesSearch) return const SizedBox.shrink();
 
                       return ListTile(
                         leading: CircleAvatar(
